@@ -66,7 +66,10 @@ class EqualWeightPortfolio:
         """
         TODO: Complete Task 1 Below
         """
-
+        num_assets = len(assets)
+        equal_weight = 1.0 / num_assets
+        self.portfolio_weights[assets] = equal_weight
+        self.portfolio_weights[self.exclude] = 0
         """
         TODO: Complete Task 1 Above
         """
@@ -117,7 +120,16 @@ class RiskParityPortfolio:
         """
         TODO: Complete Task 2 Below
         """
+        # Calculate volatility for each asset
+        volatility = df[assets].std(axis=0)
 
+        # Calculate inverse volatility weights
+        inverse_volatility_weights = 1 / volatility
+
+        # Normalize weights using the formula
+        weights_sum = inverse_volatility_weights.sum()
+        self.portfolio_weights[assets] = inverse_volatility_weights / weights_sum
+                
         """
         TODO: Complete Task 2 Above
         """
@@ -190,10 +202,22 @@ class MeanVariancePortfolio:
                 TODO: Complete Task 3 Below
                 """
 
-                # Sample Code: Initialize Decision w and the Objective
-                # NOTE: You can modify the following code
-                w = model.addMVar(n, name="w", ub=1)
-                model.setObjective(w.sum(), gp.GRB.MAXIMIZE)
+                # # Sample Code: Initialize Decision w and the Objective
+                # # NOTE: You can modify the following code
+                # w = model.addMVar(n, name="w", ub=1)
+                # model.setObjective(w.sum(), gp.GRB.MAXIMIZE)
+                # 1. Define decision variables (weights)
+                w = model.addMVar(n, lb=0.0, ub=1.0, name="w")  # Lower bound 0, Upper bound 1
+
+                # 2. Define objective function (maximize expected return with risk penalty)
+                expected_return = mu @ w
+                risk = 0.5 * w.T @ Sigma @ w  # 0.5 for variance
+
+                # Add gamma for risk aversion (higher gamma means more risk averse)
+                model.setObjective(expected_return - gamma * risk, gp.GRB.MAXIMIZE)
+
+                # 3. Add constraint: sum of weights equals 1
+                model.addConstr(w.sum() == 1.0, name="budget_constraint")
 
                 """
                 TODO: Complete Task 3 Below
